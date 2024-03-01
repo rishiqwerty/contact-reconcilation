@@ -1,78 +1,93 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Depends
 from datetime import datetime
-from typing import Optional
+import models
+import schema
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine
 
 app = FastAPI()
+models.Base.metadata.create_all(bind=engine)
 
 
-class Contact(BaseModel):
-    phoneNumber: str
-    email: str
-
-
-class ContactDetail(BaseModel):
-    phoneNumber: str
-    id: int
-    email: str
-    linkedId: Optional[int] = None
-    linkPrecedence: Optional[str] = "primary"
-    createdAt: datetime
-    updatedAt: datetime
-    deletedAt: Optional[datetime] = None
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 existing_contacts = []
 
 
 @app.post("/identity")
-async def root(data: Contact):
-    detail_data = ContactDetail(
-        phoneNumber=data.phoneNumber,
-        email=data.email,
-        createdAt=datetime.now(),
-        updatedAt=datetime.now(),
-        id=len(existing_contacts) + 1,
+async def root(data: schema.Contact, db: Session = Depends(get_db)):
+    contacts_with_input_email = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.email == data.email,
+            models.Contact.phone_number != data.phoneNumber,
+        )
+        .first()
     )
-    if any(
-        contact.phoneNumber == detail_data.phoneNumber for contact in existing_contacts
-    ) and any(contact.email != detail_data.email for contact in existing_contacts):
-        for contact in existing_contacts:
-            if (
-                contact.phoneNumber == detail_data.phoneNumber
-                and detail_data.linkPrecedence == "primary"
-            ):
-                detail_data.linkPrecedence = "secondary"
-                detail_data.linkedId = contact.id
-    elif any(
-        contact.email == detail_data.email for contact in existing_contacts
-    ) and any(
-        contact.phoneNumber != detail_data.phoneNumber for contact in existing_contacts
-    ):
-        for contact in existing_contacts:
-            if (
-                contact.email == detail_data.email
-                and detail_data.linkPrecedence == "primary"
-            ):
-                detail_data.linkPrecedence = "secondary"
-                detail_data.linkedId = contact.id
-    else:
-        detail_data.linkPrecedence = "primary"
-        detail_data.linkedId = None
-        detail_data.createdAt = datetime.now()
-        detail_data.updatedAt = datetime.now()
-    existing_contacts.append(detail_data)
-    print(existing_contacts)
+    contacts_with_input_phone = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.phone_number == data.phoneNumber,
+            models.Contact.email != data.email,
+        )
+        .first()
+    )
+    contacts_with_input_email_and_phone = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.phone_number == data.phoneNumber,
+            models.Contact.email == data.email,
+        )
+        .first()
+    )
 
-    return {"message": existing_contacts}
+    if contacts_with_input_phone and not contacts_with_input_email:
+        db_new_contact = models.Contact(
+            email=data.email,
+            phone_number=data.phoneNumber,
+            link_precedence="secondary",
+            linked_id=contacts_with_input_phone[0].id,
+        )
+        db.add(db_new_contact)
+        db.commit()
+        db.refresh(db_new_contact)
+    elif contacts_with_input_email and not contacts_with_input_phone:
+        print("00000", contacts_with_input_email.id)
+        db_new_contact = models.Contact(
+            email=data.email,
+            phone_number=data.phoneNumber,
+            link_precedence="secondary",
+            linked_id=contacts_with_input_email.id,
+        )
+        db.add(db_new_contact)
+        db.commit()
+        db.refresh(db_new_contact)
+    elif contacts_with_input_email_and_phone:
+        return {"message": contacts_with_input_email_and_phone}
+    else:
+        db_new_contact = models.Contact(
+            email=data.email, phone_number=data.phoneNumber, link_precedence="primary"
+        )
+        db.add(db_new_contact)
+        db.commit()
+        db.refresh(db_new_contact)
+    return {"message": db_new_contact}
 
 
 @app.get("/identity")
-async def root(data: Contact):
+async def root(db: Session = Depends(get_db)):
+    contacts_with_input_email = db.query(models.Contact).all()
     # if any(contact.phoneNumber == data.phoneNumber for contact in existing_contacts) and \
     #     any(contact.email != data.email for contact in existing_contacts):
     #         data.linkPrecedence = 'secondary'
     #         for contact in existing_contacts:
     #             if contact.phoneNumber == data.phoneNumber and data.linkPrecedence== 'primary':
     #                 data.linkedId = contact.id
-    return {"message": existing_contacts}
+    return {"message": contacts_with_input_email}
