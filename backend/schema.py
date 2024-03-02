@@ -27,3 +27,13 @@ class ContactResponse(BaseModel):
     emails: list
     phoneNumbers: list
     secondaryContactIds: list
+
+
+class ContactCreate(BaseModel):
+    phoneNumber: str
+    email: str
+    linkedId: Optional[int] = None
+    linkPrecedence: Optional[str] = "primary"
+
+    class Config:
+        orm_mode = True
