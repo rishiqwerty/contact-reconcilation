@@ -180,7 +180,7 @@ def get_contact(db: Session, data: schema.Contact):
         )
         linked_contacts = (
             db.query(models.Contact)
-            .filter(models.Contact.linked_id == contacts_with_input_phone[0].id)
+            .filter(models.Contact.linked_id == contacts_with_input_email[0].id)
             .all()
         )
     else:
