@@ -4,8 +4,8 @@ from datetime import datetime
 
 
 class Contact(BaseModel):
-    phoneNumber: str | None
-    email: str | None
+    phoneNumber: Optional[str] = None
+    email: Optional[str] = None
 
 
 class ContactDetail(BaseModel):
