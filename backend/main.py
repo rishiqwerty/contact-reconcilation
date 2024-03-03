@@ -20,7 +20,7 @@ models.Base.metadata.create_all(bind=engine)
 existing_contacts = []
 
 
-@app.post("/identity")
+@app.post("/identify")
 async def root(data: schema.Contact, db: Session = Depends(get_db)):
     response = crud.get_contact(db=db, data=data)
     # response = {
@@ -159,7 +159,7 @@ async def root(data: schema.Contact, db: Session = Depends(get_db)):
     return response
 
 
-@app.get("/identity")
+@app.get("/identify")
 async def root(db: Session = Depends(get_db)):
     contacts_with_input_email = db.query(models.Contact).all()
     # if any(contact.phoneNumber == data.phoneNumber for contact in existing_contacts) and \

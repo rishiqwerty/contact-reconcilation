@@ -129,31 +129,39 @@ def get_contact(db: Session, data: schema.Contact):
             .order_by(models.Contact.created_at.asc())
             .first()
         )
+        if contacts_with_input_phone_new and contacts_with_input_email_new:
+            # The older data will be made primary and latest once is marked secondary
+            if (
+                contacts_with_input_email_new.created_at
+                > contacts_with_input_phone_new.created_at
+            ):
+                contacts_with_input_phone_new.link_precedence = "primary"
+                contacts_with_input_email_new.link_precedence = "secondary"
+                contacts_with_input_email_new.linked_id = (
+                    contacts_with_input_phone_new.id
+                )
+                linked_contacts = (
+                    db.query(models.Contact)
+                    .filter(
+                        models.Contact.linked_id == contacts_with_input_phone_new.id
+                    )
+                    .all()
+                )
+            else:
+                contacts_with_input_phone_new.link_precedence = "secondary"
+                contacts_with_input_email_new.link_precedence = "primary"
+                contacts_with_input_phone_new.linked_id = (
+                    contacts_with_input_email_new.id
+                )
+                linked_contacts = (
+                    db.query(models.Contact)
+                    .filter(
+                        models.Contact.linked_id == contacts_with_input_email_new.id
+                    )
+                    .all()
+                )
 
-        # The older data will be made primary and latest once is marked secondary
-        if (
-            contacts_with_input_email_new.created_at
-            > contacts_with_input_phone_new.created_at
-        ):
-            contacts_with_input_phone_new.link_precedence = "primary"
-            contacts_with_input_email_new.link_precedence = "secondary"
-            contacts_with_input_email_new.linked_id = contacts_with_input_phone_new.id
-            linked_contacts = (
-                db.query(models.Contact)
-                .filter(models.Contact.linked_id == contacts_with_input_phone_new.id)
-                .all()
-            )
-        else:
-            contacts_with_input_phone_new.link_precedence = "secondary"
-            contacts_with_input_email_new.link_precedence = "primary"
-            contacts_with_input_phone_new.linked_id = contacts_with_input_email_new.id
-            linked_contacts = (
-                db.query(models.Contact)
-                .filter(models.Contact.linked_id == contacts_with_input_email_new.id)
-                .all()
-            )
-
-        db.commit()
+            db.commit()
 
     # if contacts only matching provided phonenumber then create new contact with the provided data and mark it as secondary
     elif contacts_with_input_phone.first() and not contacts_with_input_email.first():
