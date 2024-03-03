@@ -24,7 +24,7 @@ APIs are hosted at render.com
     **Swagger UI API Link**: [https://contact-reconcilation.onrender.com/docs/](https://contact-reconcilation.onrender.com/docs/)
 ![Swagger UI](/README_images/image.png)
 - To get list of all the contacts we can make GET request at /identity endpoint
-![Alt GET Request](/README_images/GET.png.png)
+![Alt GET Request](/README_images/GET.png)
 - To add new contact with checks we can do POST request at /identity endpoint with phoneNumber and email.
 
 ![Alt POST request](/README_images/POST_req.png)
